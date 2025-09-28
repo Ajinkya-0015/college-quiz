@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Guidance Quiz | NIT Andhra Pradesh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: The application is designed as a three-stage, single-page experience (Welcome -> Quiz -> Results Dashboard) to guide the user seamlessly. This linear flow minimizes cognitive load. The Welcome screen sets expectations. The Quiz stage uses a progress bar to motivate completion. The Results Dashboard is the core, using a tabbed or sectioned layout. This modular design presents complex, multi-faceted results (RIASEC scores, Big Five traits, career recommendations) in a digestible, non-overwhelming manner. Users can explore their profile at their own pace, from a high-level summary to deep dives into each psychological dimension and career path, making the data personally meaningful and actionable as intended by the blueprint. -->
+    <!-- Visualization & Content Choices: 1. RIASEC Profile -> Goal: Show relative strengths of six interconnected interests -> Viz: Radar Chart (Chart.js) -> Interaction: Hover for scores -> Justification: A radar chart is the standard and most intuitive way to visualize Holland Codes, reflecting the hexagonal model of interest relationships. 2. Big Five Profile -> Goal: Compare levels of five independent personality traits -> Viz: Horizontal Bar Chart (Chart.js) -> Interaction: Hover for scores -> Justification: A bar chart provides a clear, direct comparison of trait scores, making it easy to see high and low traits at a glance. 3. Career Recommendations -> Goal: Present ranked, data-driven career suggestions with rationale -> Method: Dynamic HTML Cards -> Interaction: View match score and rationale -> Justification: Cards provide a scannable, visually organized list. The inclusion of a match score and a concise rationale directly implements the blueprint's hybrid scoring model, making the recommendations transparent and trustworthy. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #3f3c3a;
+        }
+        .quiz-option.selected {
+            background-color: #a0aec0;
+            color: #ffffff;
+            border-color: #718096;
+        }
+        .likert-option.selected {
+            background-color: #667eea;
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+        .progress-bar-fill {
+            transition: width 0.3s ease-in-out;
+        }
+        .tab-button.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 640px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Career Guidance Assessment</h1>
+            <p class="text-lg text-gray-600 mt-2">Developed for the Students of NIT Andhra Pradesh</p>
+        </header>
+
+        <!-- Welcome Screen -->
+        <section id="welcome-screen" class="text-center bg-white p-8 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Discover Your Path</h2>
+            <p class="max-w-3xl mx-auto text-gray-600 mb-6">
+                This assessment is designed to help you understand your interests and personality, and how they relate to potential career paths. It combines two scientifically validated models: the RIASEC Holland Codes for career interests and the Big Five model for personality traits. The quiz consists of 50 questions and takes about 10-15 minutes to complete. Please answer honestly for the most accurate results.
+            </p>
+            <div class="flex items-center justify-center my-6">
+                <input type="checkbox" id="consent-checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                <label for="consent-checkbox" class="ml-2 block text-sm text-gray-900">
+                    I consent to my anonymized results being used for institutional research purposes.
+                </label>
+            </div>
+            <button id="start-quiz-btn" class="bg-indigo-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Start Assessment
+            </button>
+        </section>
+
+        <!-- Quiz Screen -->
+        <section id="quiz-screen" class="hidden">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-md">
+                <div id="progress-container" class="w-full bg-gray-200 rounded-full h-4 mb-6">
+                    <div id="progress-bar" class="bg-indigo-500 h-4 rounded-full progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-center text-sm text-gray-600 mb-4">Question 1 of 50</p>
+                <div id="question-container">
+                    <!-- Questions will be dynamically inserted here -->
+                </div>
+                <div class="mt-8 flex justify-between items-center">
+                    <button id="prev-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300 disabled:opacity-50">Previous</button>
+                    <button id="next-btn" class="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">Next</button>
+                    <button id="submit-btn" class="hidden bg-green-500 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-300">Submit Answers</button>
+                </div>
+                <div id="validation-message" class="text-red-500 text-center mt-4 hidden">Please answer the current question before proceeding.</div>
+            </div>
+        </section>
+
+        <!-- Results Screen -->
+        <section id="results-screen" class="hidden">
+             <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">Your Personalized Career Profile</h2>
+                <p class="text-md text-gray-600 mt-1">Explore your results to gain insight into your unique strengths and interests.</p>
+            </div>
+
+            <!-- Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="font-semibold text-xl text-gray-700 mb-3">Your Holland Code (RIASEC)</h3>
+                    <p id="holland-code-result" class="text-4xl font-bold text-indigo-600"></p>
+                    <p class="text-gray-600 mt-2">This 3-letter code represents your top career interests.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="font-semibold text-xl text-gray-700 mb-3">Your Key Personality Traits</h3>
+                     <div id="big-five-summary-result" class="flex flex-wrap gap-2"></div>
+                    <p class="text-gray-600 mt-2">These traits describe your typical ways of thinking, feeling, and behaving.</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="mb-6 border-b border-gray-200">
+                <nav class="flex -mb-px" aria-label="Tabs">
+                    <button class="tab-button active w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="recommendations">
+                        Career Recommendations
+                    </button>
+                    <button class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="riasec">
+                        RIASEC Profile
+                    </button>
+                    <button class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="bigfive">
+                        Big Five Profile
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <!-- Recommendations -->
+                <div id="recommendations-content" class="tab-pane active">
+                     <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="font-bold text-2xl text-gray-800 mb-4">Top 5 Career Recommendations</h3>
+                        <p class="text-gray-600 mb-6">These careers are ranked based on a weighted match of your interests (RIASEC) and personality (Big Five). The match score indicates how well a career aligns with your overall profile.</p>
+                        <div id="recommendations-list" class="space-y-4">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </div>
+                </div>
+                <!-- RIASEC Profile -->
+                <div id="riasec-content" class="tab-pane hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <h3 class="font-bold text-2xl text-gray-800 mb-4">Your Interest Profile</h3>
+                             <div class="chart-container">
+                                <canvas id="riasec-chart"></canvas>
+                             </div>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                             <h3 class="font-bold text-2xl text-gray-800 mb-4">Understanding the RIASEC Types</h3>
+                             <div id="riasec-descriptions" class="space-y-3 text-gray-600">
+                                 <!-- Dynamic Content -->
+                             </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Big Five Profile -->
+                <div id="bigfive-content" class="tab-pane hidden">
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <h3 class="font-bold text-2xl text-gray-800 mb-4">Your Personality Profile</h3>
+                             <div class="chart-container" style="max-width: 600px;">
+                                <canvas id="bigfive-chart"></canvas>
+                             </div>
+                        </div>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                             <h3 class="font-bold text-2xl text-gray-800 mb-4">What Your Traits Mean for Work</h3>
+                             <div id="bigfive-descriptions" class="space-y-3 text-gray-600">
+                                 <!-- Dynamic Content -->
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <div class="mt-8 text-center">
+                <button onclick="window.print()" class="bg-gray-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-300">
+                    Print or Save Results as PDF
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const quizData = {
+            questions: [
+                { id: "q1", text: "Build kitchen cabinets", framework: "RIASEC", dimension: "R" },
+                { id: "q2", text: "Develop a new medical treatment", framework: "RIASEC", dimension: "I" },
+                { id: "q3", text: "Write a novel", framework: "RIASEC", dimension: "A" },
+                { id: "q4", text: "Teach children in a school", framework: "RIASEC", dimension: "S" },
+                { id: "q5", text: "Manage a retail store", framework: "RIASEC", dimension: "E" },
+                { id: "q6", text: "Keep financial records for a company", framework: "RIASEC", dimension: "C" },
+                { id: "q7", text: "Repair a car", framework: "RIASEC", dimension: "R" },
+                { id: "q8", text: "Study the causes of climate change", framework: "RIASEC", dimension: "I" },
+                { id: "q9", text: "Compose a piece of music", framework: "RIASEC", dimension: "A" },
+                { id: "q10", text: "Work as a physical therapist", framework: "RIASEC", dimension: "S" },
+                { id: "q11", text: "Start my own business", framework: "RIASEC", dimension: "E" },
+                { id: "q12", text: "Organize a company's office systems", framework: "RIASEC", dimension: "C" },
+                { id: "q13", text: "Work on a construction site", framework: "RIASEC", dimension: "R" },
+                { id: "q14", text: "Conduct scientific experiments", framework: "RIASEC", dimension: "I" },
+                { id: "q15", text: "Act in a play", framework: "RIASEC", dimension: "A" },
+                { id: "q16", text: "Counsel people with problems", framework: "RIASEC", dimension: "S" },
+                { id: "q17", text: "Lead a team on a major project", framework: "RIASEC", dimension: "E" },
+                { id: "q18", text: "Work as a data analyst", framework: "RIASEC", dimension: "C" },
+                { id: "q19", text: "Operate heavy machinery", framework: "RIASEC", dimension: "R" },
+                { id: "q20", text: "Analyze intelligence data", framework: "RIASEC", dimension: "I" },
+                { id: "q21", text: "Create animations for movies", framework: "RIASEC", dimension: "A" },
+                { id: "q22", text: "Help elderly people in a nursing home", framework: "RIASEC", dimension: "S" },
+                { id: "q23", text: "Negotiate business deals", framework: "RIASEC", dimension: "E" },
+                { id: "q24", text: "Check documents for errors", framework: "RIASEC", dimension: "C" },
+                { id: "q25", text: "Work outdoors as a landscape architect", framework: "RIASEC", dimension: "R" },
+                { id: "q26", text: "Solve complex mathematical problems", framework: "RIASEC", dimension: "I" },
+                { id: "q27", text: "Design clothes or furniture", framework: "RIASEC", dimension: "A" },
+                { id: "q28", text: "Mediate disputes between people", framework: "RIASEC", dimension: "S" },
+                { id: "q29", text: "Give sales presentations", framework: "RIASEC", dimension: "E" },
+                { id: "q30", text: "Develop a detailed project budget", framework: "RIASEC", dimension: "C" },
+                { id: "q31", text: "I am curious about many different things.", framework: "BigFive", trait: "O", reverse: false },
+                { id: "q32", text: "I am systematic and efficient.", framework: "BigFive", trait: "C", reverse: false },
+                { id: "q33", text: "I am talkative and outgoing.", framework: "BigFive", trait: "E", reverse: false },
+                { id: "q34", text: "I can be critical of others.", framework: "BigFive", trait: "A", reverse: true },
+                { id: "q35", text: "I am often worried or anxious.", framework: "BigFive", trait: "N", reverse: false },
+                { id: "q36", text: "I have a vivid imagination.", framework: "BigFive", trait: "O", reverse: false },
+                { id: "q37", text: "I sometimes leave things messy.", framework: "BigFive", trait: "C", reverse: true },
+                { id: "q38", text: "I am comfortable being the center of attention.", framework: "BigFive", trait: "E", reverse: false },
+                { id: "q39", text: "I am helpful and considerate towards others.", framework: "BigFive", trait: "A", reverse: false },
+                { id: "q40", text: "I get stressed out easily.", framework: "BigFive", trait: "N", reverse: false },
+                { id: "q41", text: "I am not very interested in abstract ideas.", framework: "BigFive", trait: "O", reverse: true },
+                { id: "q42", text: "I always finish tasks I start.", framework: "BigFive", trait: "C", reverse: false },
+                { id: "q43", text: "I prefer to work alone.", framework: "BigFive", trait: "E", reverse: true },
+                { id: "q44", text: "I trust what people say.", framework: "BigFive", trait: "A", reverse: false },
+                { id: "q45", text: "I am usually relaxed.", framework: "BigFive", trait: "N", reverse: true },
+                { id: "q46", text: "I enjoy art and creative activities.", framework: "BigFive", trait: "O", reverse: false },
+                { id: "q47", text: "I pay attention to details.", framework: "BigFive", trait: "C", reverse: false },
+                { id: "q48", text: "I often feel energized around people.", framework: "BigFive", trait: "E", reverse: false },
+                { id: "q49", text: "I often feel little sympathy for others.", framework: "BigFive", trait: "A", reverse: true },
+                { id: "q50", text: "I rarely feel sad or blue.", framework: "BigFive", trait: "N", reverse: true },
+            ],
+            career_database: [
+                { title: "Software Developer", riasec: "IRC", ideal_bigfive: { O: 17, C: 18, E: 9, A: 12, N: 8 } },
+                { title: "Data Scientist", riasec: "ICE", ideal_bigfive: { O: 18, C: 17, E: 12, A: 11, N: 9 } },
+                { title: "Graphic Designer", riasec: "AIE", ideal_bigfive: { O: 19, C: 13, E: 13, A: 14, N: 10 } },
+                { title: "Registered Nurse", riasec: "SIR", ideal_bigfive: { O: 12, C: 16, E: 15, A: 18, N: 7 } },
+                { title: "Marketing Manager", riasec: "ESC", ideal_bigfive: { O: 16, C: 15, E: 18, A: 13, N: 8 } },
+                { title: "Accountant", riasec: "CSE", ideal_bigfive: { O: 9, C: 19, E: 10, A: 12, N: 11 } },
+                { title: "Mechanical Engineer", riasec: "RIC", ideal_bigfive: { O: 14, C: 17, E: 11, A: 10, N: 10 } },
+                { title: "Psychologist", riasec: "ISA", ideal_bigfive: { O: 17, C: 16, E: 16, A: 19, N: 6 } },
+                { title: "Teacher", riasec: "SAE", ideal_bigfive: { O: 14, C: 15, E: 17, A: 17, N: 9 } },
+                { title: "Financial Advisor", riasec: "ECS", ideal_bigfive: { O: 11, C: 16, E: 17, A: 14, N: 9 } },
+                { title: "Architect", riasec: "AIR", ideal_bigfive: { O: 18, C: 16, E: 13, A: 12, N: 10 } },
+                { title: "Chef", riasec: "RAE", ideal_bigfive: { O: 16, C: 14, E: 14, A: 11, N: 12 } },
+                { title: "Lawyer", riasec: "EIS", ideal_bigfive: { O: 15, C: 18, E: 17, A: 9, N: 13 } },
+                { title: "Police Officer", riasec: "RSE", ideal_bigfive: { O: 8, C: 17, E: 15, A: 10, N: 8 } },
+                { title: "Librarian", riasec: "CSI", ideal_bigfive: { O: 15, C: 17, E: 8, A: 16, N: 9 } },
+            ],
+            descriptions: {
+                R: "<strong>Realistic (Doers):</strong> People who are practical, hands-on, and tool-oriented. They enjoy physical tasks and working with machines. They often prefer to work outdoors.",
+                I: "<strong>Investigative (Thinkers):</strong> People who are analytical, curious, and observant. They enjoy solving complex problems and working with ideas and theories.",
+                A: "<strong>Artistic (Creators):</strong> People who are creative, imaginative, and expressive. They enjoy working in unstructured environments and producing original work.",
+                S: "<strong>Social (Helpers):</strong> People who are empathetic, cooperative, and supportive. They enjoy helping, teaching, and working with others.",
+                E: "<strong>Enterprising (Persuaders):</strong> People who are ambitious, assertive, and persuasive. They enjoy leading people, making decisions, and taking risks for business.",
+                C: "<strong>Conventional (Organizers):</strong> People who are organized, efficient, and detail-oriented. They enjoy working with data and carrying out tasks in a systematic way.",
+                O: "<strong>Openness:</strong> This trait reflects imagination, creativity, and a preference for variety. High scorers are curious and adventurous. Low scorers are more conventional and prefer routines.",
+                C: "<strong>Conscientiousness:</strong> This trait reflects self-discipline, carefulness, and organization. High scorers are reliable and hardworking. Low scorers can be more spontaneous and less structured.",
+                E: "<strong>Extraversion:</strong> This trait reflects sociability, assertiveness, and emotional expression. High scorers are outgoing and energized by social interaction. Low scorers (introverts) are more reserved and energized by solitude.",
+                A: "<strong>Agreeableness:</strong> This trait reflects kindness, empathy, and cooperation. High scorers are trusting and helpful. Low scorers can be more competitive and skeptical.",
+                N: "<strong>Neuroticism (Emotional Stability):</strong> This trait reflects emotional stability and resilience. Low scorers are calm and secure. High scorers are more prone to stress, anxiety, and negative emotions.",
+            }
+        };
+
+        const totalQuestions = quizData.questions.length;
+        let currentQuestionIndex = 0;
+        const userAnswers = {};
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        
+        const startBtn = document.getElementById('start-quiz-btn');
+        const consentCheckbox = document.getElementById('consent-checkbox');
+        
+        const questionContainer = document.getElementById('question-container');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const validationMessage = document.getElementById('validation-message');
+
+        function checkConsent() {
+            startBtn.disabled = !consentCheckbox.checked;
+        }
+        consentCheckbox.addEventListener('change', checkConsent);
+        checkConsent();
+
+        startBtn.addEventListener('click', () => {
+            welcomeScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (validateAnswer()) {
+                if (currentQuestionIndex < totalQuestions - 1) {
+                    currentQuestionIndex++;
+                    renderQuestion();
+                }
+            }
+        });
+        
+        submitBtn.addEventListener('click', () => {
+            if (validateAnswer()) {
+                calculateResults();
+            }
+        });
+        
+        function validateAnswer() {
+            const currentQuestion = quizData.questions[currentQuestionIndex];
+            if (userAnswers[currentQuestion.id] === undefined) {
+                 validationMessage.classList.remove('hidden');
+                return false;
+            }
+            validationMessage.classList.add('hidden');
+            return true;
+        }
+
+        function renderQuestion() {
+            const question = quizData.questions[currentQuestionIndex];
+            let optionsHtml = '';
+
+            if (question.framework === 'RIASEC') {
+                const options = ['Like', 'Unsure', 'Dislike'];
+                optionsHtml = `<div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    ${options.map(opt => `
+                        <button class="quiz-option border-2 border-gray-300 text-gray-700 font-medium py-3 px-6 rounded-lg transition duration-200 hover:bg-gray-200 ${userAnswers[question.id] === opt ? 'selected' : ''}" data-value="${opt}">
+                            ${opt}
+                        </button>
+                    `).join('')}
+                </div>`;
+            } else if (question.framework === 'BigFive') {
+                const options = ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'];
+                 optionsHtml = `<div class="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 max-w-2xl mx-auto">
+                    <span class="text-sm text-gray-500 text-left">Strongly<br>Disagree</span>
+                    <div class="flex justify-center space-x-2 sm:space-x-4">
+                    ${options.map((opt, index) => `
+                        <button class="likert-option flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-gray-300 transition duration-200 hover:bg-indigo-100 ${userAnswers[question.id] === (index + 1) ? 'selected' : ''}" data-value="${index + 1}" title="${opt}">
+                           <span class="font-semibold text-lg">${index + 1}</span>
+                        </button>
+                    `).join('')}
+                    </div>
+                    <span class="text-sm text-gray-500 text-right">Strongly<br>Agree</span>
+                </div>`;
+            }
+            
+            questionContainer.innerHTML = `
+                <h3 class="text-xl sm:text-2xl font-semibold text-center text-gray-800 mb-8">${question.text}</h3>
+                ${optionsHtml}
+            `;
+
+            updateProgressBar();
+            updateNavButtons();
+            attachOptionListeners();
+        }
+        
+        function attachOptionListeners() {
+            const optionButtons = questionContainer.querySelectorAll('.quiz-option, .likert-option');
+            optionButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const question = quizData.questions[currentQuestionIndex];
+                    const value = btn.dataset.value;
+                    
+                    userAnswers[question.id] = question.framework === 'RIASEC' ? value : parseInt(value);
+                    
+                    optionButtons.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    validationMessage.classList.add('hidden');
+                });
+            });
+        }
+        
+        function updateProgressBar() {
+            const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `Question ${currentQuestionIndex + 1} of ${totalQuestions}`;
+        }
+        
+        function updateNavButtons() {
+            prevBtn.disabled = currentQuestionIndex === 0;
+            if (currentQuestionIndex === totalQuestions - 1) {
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+            } else {
+                nextBtn.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+            }
+        }
+
+        function calculateResults() {
+            // RIASEC scoring
+            const riasecScores = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+            quizData.questions.filter(q => q.framework === 'RIASEC').forEach(q => {
+                if (userAnswers[q.id] === 'Like') {
+                    riasecScores[q.dimension]++;
+                }
+            });
+
+            const sortedRiasec = Object.entries(riasecScores).sort(([,a],[,b]) => b-a);
+            const hollandCode = sortedRiasec.slice(0, 3).map(item => item[0]).join('');
+
+            // Big Five scoring
+            const bigFiveScores = { O: 0, C: 0, E: 0, A: 0, N: 0 };
+            quizData.questions.filter(q => q.framework === 'BigFive').forEach(q => {
+                let value = userAnswers[q.id];
+                if (q.reverse) {
+                    value = 6 - value;
+                }
+                bigFiveScores[q.trait] += value;
+            });
+            
+            const getBigFiveLabel = (score) => {
+                if (score >= 17) return "Very High";
+                if (score >= 13) return "High";
+                if (score >= 9) return "Moderate";
+                if (score >= 5) return "Low";
+                return "Very Low";
+            };
+            
+            const bigFiveLabels = {
+                O: getBigFiveLabel(bigFiveScores.O),
+                C: getBigFiveLabel(bigFiveScores.C),
+                E: getBigFiveLabel(bigFiveScores.E),
+                A: getBigFiveLabel(bigFiveScores.A),
+                N: getBigFiveLabel(bigFiveScores.N),
+            };
+
+            // Career Recommendations
+            const recommendedCareers = rankCareers(riasecScores, bigFiveScores);
+
+            displayResults({ riasecScores, hollandCode, bigFiveScores, bigFiveLabels, recommendedCareers });
+        }
+        
+        function rankCareers(riasecScores, bigFiveScores) {
+            const ranked = quizData.career_database.map(career => {
+                // RIASEC match score (simple version)
+                let riasecMatch = 0;
+                const userTop3 = Object.entries(riasecScores).sort(([,a],[,b]) => b-a).slice(0,3).map(i => i[0]);
+                if (userTop3[0] === career.riasec[0]) riasecMatch += 0.5;
+                if (userTop3[1] === career.riasec[1]) riasecMatch += 0.3;
+                if (userTop3[2] === career.riasec[2]) riasecMatch += 0.2;
+                
+                // Big Five match score
+                let bigFiveDistances = 0;
+                const maxDiff = 16; // (20-4)
+                for (const trait in bigFiveScores) {
+                    const userScore = bigFiveScores[trait];
+                    const idealScore = career.ideal_bigfive[trait];
+                    const diff = Math.abs(userScore - idealScore);
+                    bigFiveDistances += (diff / maxDiff);
+                }
+                const bigFiveMatch = 1 - (bigFiveDistances / 5);
+
+                const finalScore = 0.6 * riasecMatch + 0.4 * bigFiveMatch;
+                
+                return { ...career, score: finalScore };
+            });
+
+            return ranked.sort((a, b) => b.score - a.score).slice(0, 5);
+        }
+
+        function displayResults(results) {
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+
+            // Summary
+            document.getElementById('holland-code-result').textContent = results.hollandCode;
+            const bigFiveSummaryContainer = document.getElementById('big-five-summary-result');
+            const sortedBigFive = Object.entries(results.bigFiveScores).sort(([,a],[,b]) => b-a);
+            sortedBigFive.slice(0, 2).forEach(([trait, score]) => {
+                 bigFiveSummaryContainer.innerHTML += `<span class="bg-indigo-100 text-indigo-800 text-sm font-medium mr-2 px-2.5 py-0.5 rounded">${results.bigFiveLabels[trait]} ${quizData.descriptions[trait].split(':')[0]}</span>`;
+            });
+
+            // Recommendations
+            const recommendationsList = document.getElementById('recommendations-list');
+            recommendationsList.innerHTML = results.recommendedCareers.map(career => {
+                const matchPercent = Math.round(career.score * 100);
+                const userPrimaryRiasec = results.hollandCode[0];
+                const userPrimaryBigFive = sortedBigFive[0][0];
+
+                let rationale = `A strong fit for your <strong>${quizData.descriptions[userPrimaryRiasec].split(' ')[0]}</strong> interest. Your personality profile, especially your <strong>${results.bigFiveLabels[userPrimaryBigFive]} ${quizData.descriptions[userPrimaryBigFive].split(':')[0]}</strong>, aligns well with the typical demands of this role.`;
+
+                return `
+                    <div class="border border-gray-200 p-4 rounded-lg">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <h4 class="text-xl font-semibold text-gray-800">${career.title}</h4>
+                             <span class="text-sm font-medium text-indigo-600 mt-1 sm:mt-0">Match Score: ${matchPercent}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                           <div class="bg-indigo-500 h-2.5 rounded-full" style="width: ${matchPercent}%"></div>
+                        </div>
+                         <p class="text-gray-600 mt-3 text-sm">${rationale}</p>
+                    </div>
+                `;
+            }).join('');
+
+            // RIASEC
+            const riasecDescContainer = document.getElementById('riasec-descriptions');
+            riasecDescContainer.innerHTML = Object.entries(quizData.descriptions)
+                .filter(([key]) => 'RIASEC'.includes(key))
+                .map(([key, value]) => `<p><strong>${value.split(':')[0]}:</strong>${value.split(':')[1]}</p>`).join('');
+            
+            new Chart(document.getElementById('riasec-chart'), {
+                type: 'radar',
+                data: {
+                    labels: ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'],
+                    datasets: [{
+                        label: 'Your Score',
+                        data: Object.values(results.riasecScores),
+                        fill: true,
+                        backgroundColor: 'rgba(129, 140, 248, 0.2)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        pointBackgroundColor: 'rgb(99, 102, 241)',
+                    }]
+                },
+                options: { maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 5 } } }
+            });
+            
+            // Big Five
+            const bigFiveDescContainer = document.getElementById('bigfive-descriptions');
+             bigFiveDescContainer.innerHTML = Object.entries(results.bigFiveLabels).map(([trait, label]) => `
+                <p><strong>${label} ${quizData.descriptions[trait].split(':')[0]}:</strong> ${quizData.descriptions[trait].split(':')[1]}</p>
+            `).join('');
+            
+            new Chart(document.getElementById('bigfive-chart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Openness', 'Conscientiousness', 'Extraversion', 'Agreeableness', 'Neuroticism'],
+                    datasets: [{
+                        label: 'Your Score',
+                        data: Object.values(results.bigFiveScores),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.5)', 'rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(153, 102, 255, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    maintainAspectRatio: false,
+                    scales: { x: { beginAtZero: true, max: 20 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+            
+            // Tabs
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    const tabId = button.dataset.tab;
+                    tabPanes.forEach(pane => {
+                        if (pane.id === `${tabId}-content`) {
+                            pane.classList.remove('hidden');
+                        } else {
+                            pane.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        }
+    });
+    </script>
+</body>
+</html>
+
